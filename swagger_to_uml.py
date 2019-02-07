@@ -22,6 +22,8 @@ import json
 import sys
 from typing import List, Optional, Any, Set
 import yaml
+import datetime
+import os
 
 
 def resolve_ref(ref):
@@ -198,7 +200,8 @@ class Definition:
             ))
 
         if not 'type' in d:
-            print('required key "type" not found in dictionary ' + json.dumps(d), file=sys.stderr)
+            d['type'] = 'object'
+            # Uses the type object as default when it is not defined.
 
         return Definition(name=name,
                           type=d['type'],
@@ -361,14 +364,20 @@ class Swagger:
     @staticmethod
     def from_file(filename):
         loader = json.load
-        if filename.endswith('.yml'):
+        if filename.endswith(('.yaml', '.yml')):
             loader = yaml.load
         with open(filename, 'r') as fd:
             return Swagger.from_dict(loader(fd))
 
     @property
     def uml(self):
-        uml_str = '@startuml\nhide empty members\nset namespaceSeparator none\n\n{paths}\n{definitions}\n@enduml\n'
+        filename_w_ext = os.path.basename(input_file_name)
+        service_name = os.path.splitext(filename_w_ext)[0]
+
+        uml_str = '\' ' + service_name + '\n' \
+                  '\' Context: Swagger\n' \
+                  '\' Verified: ' + datetime.date.today().strftime("%d.%m.%Y") + '\n'\
+                  '@startuml\nhide empty members\nset namespaceSeparator none\n\n{paths}\n{definitions}\n@enduml\n'
         return uml_str.format(
             paths='\n\n'.join([d.uml for d in self.paths]),
             definitions='\n\n'.join([d.uml for d in self.definitions])
